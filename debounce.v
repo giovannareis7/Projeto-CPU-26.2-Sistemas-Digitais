@@ -1,4 +1,3 @@
-
 module debounce(
     input       clock,
     input       entrada,

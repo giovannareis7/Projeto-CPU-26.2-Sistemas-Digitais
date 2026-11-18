@@ -3,9 +3,9 @@ module lcd_controller(
     input reset,
     input ligado,
     input atualizar,
-    input [2:0] opcode,
-    input [3:0] destino,
-    input [15:0] resultado,
+    input [2:0] opd,
+    input [3:0] dest,
+    input [15:0] result,
     output busy,
     output LCD_RS,
     output LCD_RW,
@@ -16,6 +16,10 @@ module lcd_controller(
 
     //Clock de 50 MHz
     localparam  CLK_HZ = 50000000;
+
+    reg [2:0] opcode;
+    reg [3:0] destino;
+    reg [15:0] resultado;
 
     //Tempos de espera
     localparam  CICLOS_LIGAR = CLK_HZ / 50;
@@ -38,11 +42,6 @@ module lcd_controller(
     reg [5:0] exibir;
     reg enviando_inicializacao;
     reg tela_inicial;
-
-    //Dados recebidos da CPU
-    reg [2:0] opcode;
-    reg [3:0] destino;
-    reg [15:0] resultado;
 
     //Dados que serao enviados ao LCD
     reg tipo;
@@ -106,7 +105,8 @@ module lcd_controller(
             tela[14] = "-";
             tela[15] = "]";
 
-            tela[27] = "+";
+            tela[26] = "+";
+            tela[27] = "0";
             tela[28] = "0";
             tela[29] = "0";
             tela[30] = "0";
@@ -188,32 +188,19 @@ module lcd_controller(
                 tela[13] = destino[1] ? "1" : "0";
                 tela[14] = destino[0] ? "1" : "0";
 
-                //Exibe cinco digitos quando necessario
-                if (valor_bcd[19:16] != 4'd0) begin
-
-                    tela[26] = negativo ? "-" : "+";
-
-                    tela[27] = 8'h30 + {4'b0000, valor_bcd[19:16]};
-                    tela[28] = 8'h30 + {4'b0000, valor_bcd[15:12]};
-                    tela[29] = 8'h30 + {4'b0000, valor_bcd[11:8]};
-                    tela[30] = 8'h30 + {4'b0000, valor_bcd[7:4]};
-                    tela[31] = 8'h30 + {4'b0000, valor_bcd[3:0]};
-                end
-                else begin
-
-                    tela[27] = negativo ? "-" : "+";
-
-                    tela[28] = 8'h30 + {4'b0000, valor_bcd[15:12]};
-                    tela[29] = 8'h30 + {4'b0000, valor_bcd[11:8]};
-                    tela[30] = 8'h30 + {4'b0000, valor_bcd[7:4]};
-                    tela[31] = 8'h30 + {4'b0000, valor_bcd[3:0]};
-                end
+         
+                tela[26] = negativo ? "-" : "+";
+                tela[27] = 8'h30 + {4'b0000, valor_bcd[19:16]};
+                tela[28] = 8'h30 + {4'b0000, valor_bcd[15:12]};
+                tela[29] = 8'h30 + {4'b0000, valor_bcd[11:8]};
+                tela[30] = 8'h30 + {4'b0000, valor_bcd[7:4]};
+                tela[31] = 8'h30 + {4'b0000, valor_bcd[3:0]};
             end
         end
     end
 
     //Maquina de estados do controlador
-    always @(posedge clk or posedge reset) begin
+    always @(posedge clock or posedge reset) begin
 
         if (reset) begin
 
@@ -269,7 +256,6 @@ module lcd_controller(
                     else begin
                         contador <= contador + 1'b1;
                     end
-
                 end
 
                 //Seleciona os comandos de inicializacao
@@ -304,7 +290,6 @@ module lcd_controller(
                     else begin
                         contador <= contador + 1'b1;
                     end
-
                 end
 
                 //Mantem ENABLE ativo
@@ -322,7 +307,7 @@ module lcd_controller(
                 //Aguarda 1 milissegundo
                 ESPERAR_LCD: begin
 
-                    if (contador >= CICLOS_milissegundos - 1) begin
+                    if (contador >= ((dado == 8'h01) ? 2*CICLOS_milissegundos : CICLOS_milissegundos) - 1) begin                        
                         contador <= 32'd0;
                         estado <= PROXIMO;
                     end
@@ -365,12 +350,10 @@ module lcd_controller(
 
                     if (atualizar) begin
 
-                        opcode <= opcode;
-                        destino <= destino;
-                        resultado <= resultado;
-
+                        opcode    <= opd;
+                        destino   <= dest;
+                        resultado <= result;
                         tela_inicial <= 1'b0;
-
                         exibir <= 6'd0;
                         estado <= DISPLAY;
                     end
@@ -382,27 +365,22 @@ module lcd_controller(
                     contador <= 32'd0;
 
                     if (exibir == 0) begin
-
                         tipo <= 1'b0;
                         dado <= 8'h01;
                     end
                     else if (exibir == 1) begin
-
                         tipo <= 1'b0;
                         dado <= 8'h80;
                     end
                     else if (exibir <= 17) begin
-
                         tipo <= 1'b1;
                         dado <= tela[exibir - 6'd2];
                     end
                     else if (exibir == 18) begin
-
                         tipo <= 1'b0;
                         dado <= 8'hC0;
                     end
                     else begin
-
                         tipo <= 1'b1;
                         dado <= tela[exibir - 6'd3];
                     end

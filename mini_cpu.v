@@ -9,7 +9,7 @@ module mini_cpu(
     output wire [7:0] LCD_DATA,
     output wire LCD_ON
 );
-	//Debounce do botao 
+//Debounce do botao
     wire ligar_limpo, enviar_limpo;
     debounce db_ligar  (.clock(clock), .entrada(ligar),  .saida(ligar_limpo));
     debounce db_enviar (.clock(clock), .entrada(enviar), .saida(enviar_limpo));
@@ -17,7 +17,7 @@ module mini_cpu(
    //Detectar a borda
     reg ligar_ant = 1'b1;          
     always @(posedge clock) begin
-			ligar_ant <= ligar_limpo;
+ligar_ant <= ligar_limpo;
     end
 
     //pulso de 1 ciclo quando o botão é SOLTO
@@ -29,7 +29,7 @@ module mini_cpu(
         if (pulso_ligar) ligado <= ~ligado;
     end
 
-    wire clear = ~ligado;     
+    wire clear = ~ligado;    
 
     //para guardar as instrucoes, mesmo que comece a mudar os switches no processo
     reg [17:0] instrucoes;
@@ -68,63 +68,63 @@ module mini_cpu(
     end
 
     //capturar informacoes
-	 reg validar = 1'b0;
+reg validar = 1'b0;
     always @(posedge clock) begin
-			validar <= 1'b0;
+validar <= 1'b0;
         if(!ligado) instrucoes <= 18'b0;
         else if(estado_atual == CAPTURAR_INSTRUCAO)begin
-				instrucoes <= switches;
-				validar <= 1'b1;
-			end
-    end   
-	 
-	 //opcode:
-	 wire [2:0] opcode = instrucoes[17:15];
-	 parameter LOAD = 0, ADD = 1, ADDI = 2, SUB = 3, SUBI = 4, MUL = 5, CLEAR = 6, DISPLAY = 7;
-	 
-	//separar os casos e declarar fios:
-		reg [3:0] destino;
-		reg [3:0] registrador1;
-		reg [3:0] registrador2;
-		reg sinal;
-		reg [5:0] imediato;
-		wire reset = 0;
-	
-	 always @(*) begin 
-			destino      = 4'd0;
-			registrador1 = 4'd0;
-			registrador2 = 4'd0;
-			sinal        = 1'b0;
-			imediato     = 6'd0;
+instrucoes <= switches;
+validar <= 1'b1;
+end
+    end  
 
-			case(opcode)
-				ADD, SUB: begin
-					destino = instrucoes[14:11];
-					registrador1 = instrucoes[10:7];
-					registrador2 = instrucoes[6:3];
-				end
-					
-				ADDI, SUBI, MUL: begin
-					destino = instrucoes[14:11];
-					registrador1 = instrucoes[10:7];
-					sinal = instrucoes[6];
-					imediato = instrucoes[5:0];
-				end
-					
-				LOAD: begin
-					destino = instrucoes[14:11];
-					sinal = instrucoes[10];
-					imediato = instrucoes[9:4];
-				end
-				
-				DISPLAY: begin
-					registrador1 = instrucoes[14:11];
-				end		
-			endcase
-	 end
-	 
-	//chamar a ula e a memoria:
-	 
+//opcode:
+wire [2:0] opcode = instrucoes[17:15];
+parameter LOAD = 0, ADD = 1, ADDI = 2, SUB = 3, SUBI = 4, MUL = 5, CLEAR = 6, DISPLAY = 7;
+
+//separar os casos e declarar fios:
+reg [3:0] destino;
+reg [3:0] registrador1;
+reg [3:0] registrador2;
+reg sinal;
+reg [5:0] imediato;
+wire reset = 0;
+
+always @(*) begin
+destino      = 4'd0;
+registrador1 = 4'd0;
+registrador2 = 4'd0;
+sinal        = 1'b0;
+imediato     = 6'd0;
+
+case(opcode)
+ADD, SUB: begin
+destino = instrucoes[14:11];
+registrador1 = instrucoes[10:7];
+registrador2 = instrucoes[6:3];
+end
+
+ADDI, SUBI, MUL: begin
+destino = instrucoes[14:11];
+registrador1 = instrucoes[10:7];
+sinal = instrucoes[6];
+imediato = instrucoes[5:0];
+end
+
+LOAD: begin
+destino = instrucoes[14:11];
+sinal = instrucoes[10];
+imediato = instrucoes[9:4];
+end
+
+DISPLAY: begin
+registrador1 = instrucoes[14:11];
+end
+endcase
+end
+
+//chamar a ula e a memoria:
+
     // valores que a memoria vai devolver para a CPU
     wire [15:0] valor_lido1;
     wire [15:0] valor_lido2;
@@ -157,9 +157,9 @@ module mini_cpu(
         .valor_lido1(valor_lido1),
         .valor_lido2(valor_lido2)
     );
-	 
-	//chamada do modulo da ula
-	ula diva(
+
+//chamada do modulo da ula
+alu diva(
         .opcode(opcode),
         .valor1(valor_lido1),
         .valor2(valor_lido2),
@@ -167,7 +167,7 @@ module mini_cpu(
         .imediato(imediato),
         .resultado(resultado_ula)
     );
-	 
+
     //lcd:
     wire lcd_busy;
     reg lcd_pendente = 1'b0;
@@ -175,18 +175,18 @@ module mini_cpu(
     reg [2:0] opcode_lcd = 3'd0;
     reg [3:0] destino_lcd = 4'd0;
     reg [15:0] resultado_lcd = 16'd0;
-        
+       
     // o LCD aceita no mesmo ciclo em que estiver livre (IDLE) e houver pedido
     wire atualizar_lcd = lcd_pendente && !lcd_busy;
 
     always @(posedge clock) begin
         if (!ligado) begin
             lcd_pendente <= 1'b0;
-        end 
+        end
         else begin
-            if (atualizar_lcd) lcd_pendente <= 1'b0; 
+            if (atualizar_lcd) lcd_pendente <= 1'b0;
 
-            if (validar) begin                       
+            if (validar) begin                      
                 opcode_lcd    <= opcode;
                 destino_lcd   <= (opcode == DISPLAY) ? registrador1 : destino;
                 resultado_lcd <= resultado_ula;
@@ -195,15 +195,15 @@ module mini_cpu(
         end
     end
 
-	lcd_controller lcd(
+lcd_controller lcd(
         .clock(clock),
         .reset(reset),
         .ligado(ligado),
         .atualizar(atualizar_lcd),
 
-        .opcode(opcode_lcd),
-        .destino(destino_lcd),
-        .resultado(resultado_lcd),
+        .opd(opcode_lcd),
+        .dest(destino_lcd),
+        .result(resultado_lcd),
 
         .busy(lcd_busy),
         .LCD_RS(LCD_RS),

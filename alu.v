@@ -1,6 +1,6 @@
 module alu(
     input       [2:0] opcode,          // operacao a ULA deve realizar
-    input       [15:0] valor1,         // primeiro registrador 
+    input       [15:0] valor1,         // primeiro registrador
     input       [15:0] valor2,         // segundo registrador
     input       sinal,                
     input       [5:0] imediato,        // imediato sem sinal
@@ -82,4 +82,3 @@ module alu(
         endcase
     end
 endmodule
-
